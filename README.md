@@ -1,221 +1,191 @@
-# From Transactions to Strategy: Customer Segmentation with Machine Learning
+# Customer Segmentation Using RFM Analysis and Machine Learning
 
-**By Alexandre Merlet** · [LinkedIn](https://www.linkedin.com/in/alexmerlet) · [alexmerlet1@gmail.com](mailto:alexmerlet1@gmail.com)
-
----
-
-> *Most marketers think in campaigns. The best ones think in customers. This project is about learning to see the difference.*
+**Alexandre Merlet** · [LinkedIn](https://www.linkedin.com/in/alexmerlet) · [alexmerlet1@gmail.com](mailto:alexmerlet1@gmail.com)
 
 ---
 
-## Why This Project Exists
+## Overview
 
-Marketing budgets get wasted every day — not because the creative was bad, but because everyone got the same message. The loyal VIP customer and the lapsed one-time buyer received the same email. The big spender and the bargain hunter saw the same ad. That's not targeting. That's broadcasting.
+This project applies machine learning clustering methods to a real retail transaction dataset in order to segment customers into behaviorally distinct groups. The goal is to move beyond aggregate marketing and produce segments that are statistically valid and directly actionable by a CRM or marketing team.
 
-This project applies **data science to a problem that marketers face daily**: who are your customers, really — and what does each group actually need from you?
-
-Using a real retail dataset of **4,338 customers and 500,000+ transactions**, I built a customer segmentation system from scratch — cleaning raw data, engineering behavioural features, comparing four machine learning algorithms, and translating the results into concrete marketing actions.
-
-The result: four distinct customer segments with statistically validated profiles, each with a different value to the business and a different strategy for growth.
+The dataset contains transactions from 4,338 customers across roughly 500,000 line items. Each customer is described using three behavioral features derived from their purchase history: recency, frequency, and monetary value (RFM). Four clustering algorithms were tested and evaluated against three standard metrics. K-Means clustering produced the strongest result and was selected as the final model.
 
 ---
 
-## What is RFM? (The Marketing Framework Behind the Math)
+## Background: The RFM Framework
 
-Before any machine learning happens, every customer needs to be described in numbers. I used **RFM** — a framework used by CRM teams at companies like Amazon, Sephora, and Marriott:
+RFM is a customer analysis framework widely used in CRM and direct marketing. It summarises a customer's purchase history into three measurable dimensions:
 
-| Metric | What it measures | Why it matters |
-|--------|-----------------|----------------|
-| **Recency** | Days since last purchase | Recent buyers are more likely to buy again |
-| **Frequency** | Number of unique orders | Frequent buyers have stronger brand loyalty |
-| **Monetary** | Total lifetime spend | High-value customers deserve different treatment |
+| Metric | Definition |
+|--------|-----------|
+| **Recency** | Number of days since the customer's last purchase |
+| **Frequency** | Total number of unique orders placed |
+| **Monetary** | Total spend across all transactions |
 
-These three numbers compress a customer's entire purchase history into something a machine learning model — and a marketing team — can act on.
+These three features are sufficient to distinguish meaningfully different customer types without requiring more complex behavioral or demographic data. The simplicity of RFM also makes it practical: the outputs can be exported directly into most CRM platforms.
 
 ---
 
-## The Data
+## Data
 
-**Source:** UCI Machine Learning Repository — Online Retail Dataset  
-**Scope:** UK-based e-commerce retailer, 2010–2011  
-**Raw transactions:** ~500,000 line items  
+**Source:** UCI Machine Learning Repository, Online Retail Dataset  
+**Period:** December 2010 to December 2011  
+**Retailer:** UK-based e-commerce business  
+**Raw transactions:** approximately 500,000 line items  
 **Customers after cleaning:** 4,338
 
-Cleaning steps:
-- Removed transactions with missing CustomerID
-- Filtered out returns (negative quantities) and zero-price items
-- Computed `TotalPrice = Quantity × UnitPrice` per line item
-- Aggregated to one RFM row per customer
+The following cleaning steps were applied before feature engineering:
+
+- Removed all records with a missing CustomerID
+- Removed transactions with negative quantities (returns) and zero unit prices
+- Computed a TotalPrice field as Quantity multiplied by UnitPrice
+- Aggregated all transactions to one row per customer containing their RFM values
 
 ---
 
-## The Method: Four Algorithms, One Winner
+## Methodology
 
-Rather than defaulting to a single algorithm, I compared four approaches head-to-head:
+### Feature scaling
 
-| Method | How it works | Strength |
-|--------|-------------|----------|
-| **K-Means** | Groups by minimising distance to cluster centres | Fast, interpretable, scales well |
-| **DBSCAN** | Groups by density; flags outliers as noise | Finds irregular shapes, detects anomalies |
-| **Hierarchical** | Builds a tree of merges (Ward linkage) | No need to pre-specify cluster count |
-| **GMM** | Probabilistic; assigns soft membership | Handles overlapping clusters |
+RFM values vary considerably in range. Recency is measured in days, while monetary values can reach into the hundreds of thousands. Without scaling, algorithms that rely on distance calculations would be dominated by the monetary dimension. All three features were standardised using scikit-learn's StandardScaler prior to clustering.
 
-### How I chose the number of clusters
+### Selecting the number of clusters
 
-I didn't just guess — I used two statistical tests:
+Two methods were used to determine an appropriate number of clusters:
 
-- **Elbow method**: plots inertia vs. number of clusters; look for where improvement flattens
-- **Silhouette score**: measures how well-separated clusters are (range: −1 to 1; higher = better)
+- **Elbow method:** inertia (within-cluster sum of squared distances) is plotted against cluster count. The point where the rate of improvement begins to flatten suggests a reasonable number of clusters.
+- **Silhouette analysis:** measures how similar each observation is to its own cluster compared to other clusters. Scores range from -1 to 1, with higher values indicating better-defined separation.
 
-I added a business constraint: a minimum of 4 clusters, because fewer than that doesn't give a marketing team enough to work with. The final selection balanced statistical quality with practical usability.
+A minimum of four clusters was set as a business constraint, since fewer segments are unlikely to provide enough differentiation for a marketing team to act on meaningfully.
 
-### Winner: K-Means
+### Algorithms compared
+
+Four clustering methods were evaluated:
+
+| Method | Description |
+|--------|-------------|
+| **K-Means** | Partitions data by minimising within-cluster variance around centroids |
+| **DBSCAN** | Density-based method; identifies clusters of arbitrary shape and flags outliers |
+| **Hierarchical (Ward)** | Builds a cluster hierarchy by minimising within-cluster variance at each merge |
+| **Gaussian Mixture Model (GMM)** | Probabilistic model that assigns soft cluster membership |
+
+Each method was evaluated on three metrics: Silhouette Score, Calinski-Harabasz Index, and Davies-Bouldin Index.
+
+### Results
 
 | Method | Silhouette Score | Calinski-Harabasz | Davies-Bouldin |
 |--------|-----------------|-------------------|----------------|
-| **K-Means** | **0.6162 ✓** | **3,149.72 ✓** | **0.7534 ✓** |
+| **K-Means** | **0.6162** | **3,149.72** | **0.7534** |
 | Hierarchical | 0.58 | 2,814.3 | 0.81 |
 | GMM | 0.54 | 2,103.6 | 0.94 |
 | DBSCAN | 0.31 | 487.2 | 2.14 |
 
-A silhouette score of **0.6162 is considered strong** — it means customers within each segment are genuinely more similar to each other than to those in other segments. These aren't arbitrary labels; they're real behavioural groups.
+K-Means ranked first on all three metrics and was selected as the final model. A silhouette score of 0.6162 indicates strong cluster separation, meaning the four segments reflect genuinely different behavioral groups rather than arbitrary divisions.
 
-> DBSCAN underperformed here — worth noting. RFM data tends to form roughly spherical clusters in scaled space, which is exactly what K-Means is designed for. DBSCAN excels when clusters have irregular shapes or when outlier detection is the primary goal.
-
----
-
-## The Four Customer Segments
-
-### 🌟 Cluster 2 — VIP Customers *(13 customers, 0.3%)*
-
-| Recency | Frequency | Avg Spend |
-|---------|-----------|-----------|
-| ~7 days | ~83 orders | $127,338 |
-
-These are the accounts that keep the lights on. Tiny in number — just 13 customers — but they collectively represent over **$1.65M in revenue**. They buy constantly, they bought recently, and they spend at a level that is an order of magnitude above everyone else.
-
-**Marketing strategy:**
-- White-glove account management. These customers should have a named contact.
-- Early access to new products and collections before public launch
-- Private events, exclusive previews, first-look invitations
-- Zero tolerance for friction — any service issue gets escalated immediately
-- Quarterly business reviews if B2B; personalised gifting if B2C
-
-**The risk:** losing one of these customers is catastrophic. Protect them above everything else.
-
----
-
-### 🟢 Cluster 3 — Loyal High-Value Customers *(204 customers, 4.7%)*
-
-| Recency | Frequency | Avg Spend |
-|---------|-----------|-----------|
-| ~16 days | ~22 orders | $12,709 |
-
-The growth engine. These customers shop frequently, spend well above average, and bought recently. They're not VIPs yet — but they're the most likely candidates to become one.
-
-**Marketing strategy:**
-- Loyalty programme with visible progress toward a VIP tier
-- Upsell and cross-sell based on purchase history — what do VIPs buy that this group doesn't?
-- Personalised product recommendations; they've earned the right to feel known
-- Referral incentives — they're engaged enough to advocate
-
-**The opportunity:** moving even 10% of this group to VIP tier would meaningfully change revenue.
-
----
-
-### 🟡 Cluster 0 — Moderate Spenders *(3,054 customers, 70.4%)*
-
-| Recency | Frequency | Avg Spend |
-|---------|-----------|-----------|
-| ~44 days | ~4 orders | $1,359 |
-
-The majority of the customer base — and the most underserved segment. These customers are still active (44-day recency is recent), they've bought multiple times, but they haven't grown. They're stuck.
-
-**Marketing strategy:**
-- Behaviour-triggered email sequences — if they browse but don't buy, send a nudge
-- Bundle offers and volume discounts to increase average order value
-- Educational content marketing — help them get more value from products they already buy
-- Re-engagement campaigns at the 60-day mark before they drift into the next segment
-
-**The opportunity:** this is the highest-volume segment. A 10% increase in their average spend adds more total revenue than doubling the Loyal High-Value segment.
-
----
-
-### 🔴 Cluster 1 — Lost Customers *(1,067 customers, 24.6%)*
-
-| Recency | Frequency | Avg Spend |
-|---------|-----------|-----------|
-| ~248 days | ~2 orders | $481 |
-
-These customers haven't purchased in over 8 months. They bought infrequently when they were active, and they've gone quiet. Reactivation is possible but requires a different playbook.
-
-**Marketing strategy:**
-- "We miss you" win-back campaign with a time-limited offer (urgency matters here)
-- Survey: a simple 2-question email asking why they stopped — the data is more valuable than a small re-order
-- Suppress from standard campaigns — continuing to email them hurts deliverability scores
-- Accept that some churn is permanent; focus budget on the highest-recency customers in this group (those at 150–200 days are more recoverable than those at 300+)
-
-**The honest view:** not everyone comes back. The goal is to identify who's worth fighting for.
-
----
-
-## What This Means for a Marketing Team
-
-Here is the same customer base, seen two different ways:
-
-**Before segmentation:** "We have 4,338 customers. Let's send them all the autumn campaign."
-
-**After segmentation:**
-- Send VIPs a personal call or handwritten note with early access
-- Send Loyal High-Value customers a loyalty progress update and a personalised upsell
-- Send Moderate Spenders a bundle offer with a 72-hour window
-- Send Lost Customers a win-back offer — then suppress the non-responders
-
-Same budget. Dramatically different results. That's the value of segmentation.
+DBSCAN performed poorly on this dataset. RFM data tends to form roughly spherical clusters in scaled feature space, which is well-suited to K-Means. DBSCAN is better suited to datasets with irregular cluster shapes or where anomaly detection is a primary objective.
 
 ---
 
 ## Visualisations
 
-### 1. Choosing the right number of clusters
-How I decided on 4 clusters — elbow method (inertia) on the left, silhouette score on the right. The green line shows the business-adjusted selection.
+### 1. Optimal cluster selection
+The elbow curve and silhouette scores used to determine the final cluster count of four.
 
 ![Optimal cluster selection](results/figures/optimal_clusters.png)
 
----
-
-### 2. All four algorithms compared (PCA projection)
-Each clustering method plotted in 2D using Principal Component Analysis. K-Means produces the cleanest, most distinct boundaries — confirming why it scored highest.
+### 2. Algorithm comparison (PCA projection)
+All four clustering methods projected into two dimensions using Principal Component Analysis, allowing a visual comparison of cluster boundary quality.
 
 ![Clustering comparison PCA](results/figures/clustering_comparison_pca.png)
 
----
-
-### 3. Algorithm performance metrics
-Side-by-side comparison of Silhouette Score, Calinski-Harabasz, and Davies-Bouldin across all four methods. K-Means wins on all three.
+### 3. Evaluation metrics comparison
+Side-by-side comparison of all three evaluation metrics across the four algorithms.
 
 ![Metrics comparison](results/figures/metrics_comparison.png)
 
----
-
-### 4. Segment deep-dive — RFM heatmap + distributions
-The winning K-Means model broken down: average RFM values per cluster (heatmap), plus recency, frequency, and monetary distributions for each segment.
+### 4. K-Means segment analysis
+RFM heatmap showing average values per cluster, alongside distribution plots for each feature broken down by segment.
 
 ![K-Means detailed analysis](results/figures/k-means_detailed_analysis.png)
 
----
-
-### 5. Customer distribution across segments
-How the 4,338 customers are split across the four segments — the long tail of Moderate Spenders (70%) versus the tiny but high-value VIP group (0.3%) is immediately visible.
+### 5. Segment size distribution
+The proportion of customers assigned to each of the four segments.
 
 ![Cluster sizes](results/figures/k-means_cluster_sizes.png)
 
----
-
-### 6. 3D RFM space — all customers plotted
-Every customer plotted in three-dimensional RFM space, coloured by segment. The VIP cluster (top-right: high frequency, high monetary, low recency) is visually isolated from the rest — these customers are genuinely different.
+### 6. 3D RFM visualisation
+All customers plotted in three-dimensional RFM space, coloured by segment. The VIP cluster is visually isolated in the high-frequency, high-monetary, low-recency region.
 
 ![3D RFM visualization](results/figures/k-means_3d_visualization.png)
+
+---
+
+## Segment Profiles
+
+### Cluster 2: VIP Customers (13 customers, 0.3% of base)
+
+| Recency | Frequency | Average Spend |
+|---------|-----------|---------------|
+| 7 days | 83 orders | $127,338 |
+
+This segment contains 13 customers who collectively account for over $1.65 million in revenue. They purchase with very high frequency, have an extremely short recency, and their average spend is an order of magnitude above any other segment. Despite their small size, they represent a disproportionate share of total revenue and carry the highest retention risk.
+
+**Recommended actions:**
+- Assign a dedicated account contact or relationship manager
+- Provide early access to new products ahead of general release
+- Invite to private or exclusive brand events
+- Treat any service issue as a priority escalation
+- For B2B accounts, conduct quarterly reviews; for B2C, invest in personalised communication and gifting
+
+### Cluster 3: Loyal High-Value Customers (204 customers, 4.7%)
+
+| Recency | Frequency | Average Spend |
+|---------|-----------|---------------|
+| 16 days | 22 orders | $12,709 |
+
+These customers purchase regularly, spend significantly above the base average, and have bought recently. They represent the most likely candidates for migration into the VIP segment given sufficient engagement and incentive.
+
+**Recommended actions:**
+- Enrol in a loyalty programme with transparent progress toward a higher tier
+- Develop upsell recommendations based on the gap between their purchase patterns and those of VIP customers
+- Use referral incentives given their demonstrated engagement with the brand
+- Monitor monthly for customers showing an upward trajectory in all three RFM dimensions
+
+### Cluster 0: Moderate Spenders (3,054 customers, 70.4%)
+
+| Recency | Frequency | Average Spend |
+|---------|-----------|---------------|
+| 44 days | 4 orders | $1,359 |
+
+This segment comprises the majority of the customer base. Customers here are still active but show limited growth in frequency or spend over time. Because of the segment's volume, even a modest increase in average order value would have a greater absolute revenue impact than improvements in any other segment.
+
+**Recommended actions:**
+- Introduce bundle offers and volume-based pricing to increase average order value
+- Implement behaviour-triggered communication sequences, for example a follow-up when a customer browses without purchasing
+- Develop content that increases product familiarity and encourages repeat use
+- Set an automated re-engagement trigger at 60 days of inactivity, before customers transition into the lapsed segment
+
+### Cluster 1: Lapsed Customers (1,067 customers, 24.6%)
+
+| Recency | Frequency | Average Spend |
+|---------|-----------|---------------|
+| 248 days | 2 orders | $481 |
+
+These customers have not purchased in over eight months. When they were active, purchase frequency was low and average spend was below the base mean. Reactivation is possible for a subset of this group, particularly those with more recent last-purchase dates, but a significant proportion are unlikely to return.
+
+**Recommended actions:**
+- Run a time-limited win-back campaign for customers with recency between 150 and 200 days, as they are more likely to respond than those inactive for over 300 days
+- Send a short survey to understand reasons for lapsing; this data has value beyond the individual response
+- Suppress the non-responding portion from standard campaign sends to protect email deliverability
+- Accept that a portion of this segment represents permanent churn and focus reactivation spend accordingly
+
+---
+
+## Application to Marketing Operations
+
+The practical output of this analysis is a set of four customer lists, exportable as CSV files, each tagged with a segment label. These files can be imported directly into HubSpot, Salesforce, Klaviyo, or any CRM platform that supports audience segmentation by custom fields.
+
+The value of this approach over standard demographic or channel-based segmentation is that it reflects actual purchase behaviour. Two customers with identical demographic profiles may belong to entirely different segments based on how they interact with the business over time, and therefore warrant different communication strategies.
 
 ---
 
@@ -234,40 +204,39 @@ Online Retail.xlsx
         │
         ▼
   StandardScaler
-  (normalise so no feature dominates)
+  (normalise feature ranges)
         │
         ▼
   Optimal K Selection
-  (elbow + silhouette, min 4 clusters)
+  (elbow method + silhouette analysis, minimum 4 clusters)
         │
-        ├──── K-Means ────────┐
-        ├──── DBSCAN          │  Compare on:
-        ├──── Hierarchical    │  · Silhouette Score
-        └──── GMM ────────────┘  · Calinski-Harabasz
-                                  · Davies-Bouldin
+        ├──── K-Means
+        ├──── DBSCAN          Evaluated on:
+        ├──── Hierarchical    · Silhouette Score
+        └──── GMM             · Calinski-Harabasz Index
+                              · Davies-Bouldin Index
                                         │
                                         ▼
-                              Best Method: K-Means
-                              (Silhouette: 0.6162)
+                              Selected model: K-Means
+                              Silhouette score: 0.6162
                                         │
                                         ▼
-                              Segment Labels + Report
-                              Figures + CSV Exports
+                              Segment labels, figures, CSV exports
 ```
 
-**Stack:** Python · pandas · scikit-learn · matplotlib · seaborn · openpyxl
+**Stack:** Python, pandas, scikit-learn, matplotlib, seaborn, openpyxl
 
 ---
 
-## Repo Structure
+## Repository Structure
 
 ```
-├── clustering-report.py        # Full end-to-end pipeline (883 lines)
+├── clustering-report.py        # End-to-end analysis pipeline
 ├── customer-cluster.ipynb      # Exploratory notebook
 ├── Online Retail.xlsx          # Source data
 └── results/
-    ├── clustering_report.txt   # Full text report
-    ├── figures/                # All visualisations (PNG)
+    ├── clustering_report.txt
+    ├── figures/
     │   ├── optimal_clusters.png
     │   ├── clustering_comparison_pca.png
     │   ├── metrics_comparison.png
@@ -276,46 +245,44 @@ Online Retail.xlsx
     │   └── k-means_cluster_sizes.png
     ├── k_means_clustered_data.csv
     ├── k_means_cluster_summary.csv
-    └── [equivalent files for DBSCAN, Hierarchical, GMM]
+    └── [equivalent outputs for DBSCAN, Hierarchical, GMM]
 ```
 
 ---
 
-## Run It Yourself
+## Running the Analysis
 
 ```bash
-# Clone and install dependencies
 git clone https://github.com/alexmerlet1/customer-clustering-segmentation.git
 cd customer-clustering-segmentation
 pip install pandas numpy matplotlib seaborn scikit-learn scipy openpyxl
 
-# Run the full pipeline
 python clustering-report.py
 
-# Optional: specify cluster count
+# To specify a different cluster count
 python clustering-report.py --clusters 5
 python clustering-report.py --min-clusters 6
 ```
 
-Outputs land in `./results/` — report, figures, and per-method CSV exports.
+All outputs are written to `./results/`.
 
 ---
 
-## What I'd Build Next
+## Possible Extensions
 
-This project is a foundation. The natural extensions are:
+Several additions would strengthen this analysis for production use:
 
-1. **Add product-category features** — RFM tells you *how much* and *how often*; category data tells you *what*. Combining both enables true persona building.
-2. **Time-series tracking** — run segmentation monthly and track which customers migrate between clusters. A Moderate Spender trending toward Lost is a very different intervention than one trending toward Loyal.
-3. **Propensity scoring** — use the cluster membership as a feature in a churn or LTV prediction model.
-4. **Connect to a CRM** — the CSV outputs are designed to be imported directly into HubSpot, Salesforce, or any email platform that accepts customer lists with segment tags.
+1. **Product category features.** RFM describes purchasing behaviour in aggregate but does not capture what customers buy. Adding category-level purchase data would allow more granular persona construction.
+2. **Longitudinal tracking.** Running the segmentation monthly and tracking customer movement between segments over time would allow earlier identification of customers at risk of lapsing.
+3. **Predictive modelling.** Cluster membership can be used as a feature in downstream models for churn prediction or customer lifetime value estimation.
+4. **CRM integration.** The CSV outputs are structured for direct import into standard CRM platforms. Automating this step would allow segment lists to be refreshed on a regular schedule.
 
 ---
 
 ## About
 
-I'm a hospitality professional pivoting into marketing strategy and analytics. My background is in luxury hotel operations and CRM — I've worked at Grand Hyatt Hong Kong, Sofitel Arc de Triomphe Paris, and Asian Trails Bangkok. I built this project because I believe the best marketing decisions come from understanding customers deeply, and because data science gives marketers a tool most of them aren't using yet.
+My background is in hospitality management and CRM. I have worked across operations and guest-facing marketing roles at Grand Hyatt Hong Kong, Sofitel Arc de Triomphe in Paris, and Asian Trails in Bangkok. This project reflects my interest in applying data analysis methods to marketing problems, particularly in understanding customer behaviour at a level of detail that is not visible through standard campaign reporting.
 
-I'm actively looking for roles in brand strategy, CRM, e-commerce marketing, or growth — particularly where there's an opportunity to bring analytical rigour to creative work.
+I am currently looking for roles in marketing strategy, CRM, e-commerce, or growth, ideally in environments where analytical and creative work overlap.
 
-📧 alexmerlet1@gmail.com · 🔗 [linkedin.com/in/alexmerlet](https://www.linkedin.com/in/alexmerlet)
+📧 alexmerlet1@gmail.com · [linkedin.com/in/alexmerlet](https://www.linkedin.com/in/alexmerlet)
